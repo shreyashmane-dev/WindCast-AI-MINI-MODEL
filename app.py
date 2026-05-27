@@ -124,14 +124,22 @@ def save_prediction(
 def get_predictions(limit=12):
     with sqlite3.connect(DB_PATH) as connection:
         connection.row_factory = sqlite3.Row
-        rows = connection.execute(
-            """
-            SELECT * FROM predictions
-            ORDER BY id DESC
-            LIMIT ?
-            """,
-            (limit,),
-        ).fetchall()
+        if limit is None:
+            rows = connection.execute(
+                """
+                SELECT * FROM predictions
+                ORDER BY id DESC
+                """
+            ).fetchall()
+        else:
+            rows = connection.execute(
+                """
+                SELECT * FROM predictions
+                ORDER BY id DESC
+                LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
 
     return [dict(row) for row in rows]
 
@@ -491,7 +499,7 @@ def predict():
 
 @app.route("/history")
 def history_page():
-    history = get_predictions()
+    history = get_predictions(limit=None)
     return render_template("history.html", history=history)
 
 
@@ -532,7 +540,7 @@ def api_predict():
 
 @app.route("/download-report")
 def download_report():
-    history = get_predictions(limit=100)
+    history = get_predictions(limit=None)
     si = StringIO()
     cw = csv.writer(si)
     cw.writerow(["ID", "Wind Speed (m/s)", "Wind Direction (deg)", "Temperature (F)", "Humidity (%)", "Predicted Power (MW)", "Timestamp"])

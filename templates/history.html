@@ -11,7 +11,7 @@
         </div>
         <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
             <a href="{{ url_for('download_report') }}" class="primary-link btn-small">Download CSV Report</a>
-            <span>Latest 12 records</span>
+            <span>Total {{ history | length }} records</span>
         </div>
     </div>
 
