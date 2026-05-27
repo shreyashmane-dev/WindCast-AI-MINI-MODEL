@@ -1,259 +1,194 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WindCast AI</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
-    <main class="page">
-        <header class="hero">
-            <p class="eyebrow">Short-Term Wind Power Forecasting</p>
-            <h1>WindCast AI</h1>
-            <p class="subtitle">Enter weather readings and get an instant local machine learning prediction.</p>
-        </header>
+{% extends "layout.html" %}
 
-        <section class="grid">
-            <div class="card">
-                <h2>Manual Prediction Form</h2>
-                <form action="{{ url_for('predict') }}" method="POST" class="form" id="prediction-form">
-                    <div class="wide-field">
-                        <p class="field-title">Choose Model</p>
-                        <div class="model-picker">
-                            {% for choice in model_choices %}
-                                {% set metric = (model_comparison | selectattr('name', 'equalto', choice) | list | first) %}
-                                <label class="model-option">
-                                    <input type="radio" name="model_choice" value="{{ choice }}" {% if choice == selected_model %}checked{% endif %}>
-                                    <span class="model-card">
-                                        <span class="model-card-top">
-                                            <span class="model-icon">{{ choice[:1] }}</span>
-                                            {% if choice == model_name %}
-                                                <span class="best-badge">Best</span>
-                                            {% endif %}
-                                        </span>
-                                        <span class="model-title">{{ choice }}</span>
-                                        {% if metric %}
-                                            <span class="model-stats">
-                                                <span>RMSE {{ metric.rmse }}</span>
-                                                <span>R2 {{ metric.r2 }}</span>
-                                            </span>
-                                        {% endif %}
-                                    </span>
-                                </label>
-                            {% endfor %}
-                        </div>
-                    </div>
+{% block title %}WindCast AI - Short-Term Wind Power Forecasting{% endblock %}
 
-                    <label>
-                        Windspeed
-                        <input type="number" step="0.01" name="windspeed" required value="{{ latest_inputs.windspeed if latest_inputs else '' }}">
-                    </label>
+{% block content %}
+<section class="hero app-section">
+    <div class="hero-content">
+        <p class="eyebrow">Short-Term Wind Power Forecasting</p>
+        <h1>WindCast AI</h1>
+        <p class="subtitle">
+            A machine learning dashboard for estimating wind turbine power from
+            windspeed, direction, temperature, and humidity readings.
+        </p>
+        <div class="hero-actions">
+            <a class="primary-link" href="{{ url_for('predict') }}">Start Prediction</a>
+            <a class="secondary-link" href="{{ url_for('about_page') }}">How It Works</a>
+        </div>
+    </div>
 
-                    <label>
-                        Wind Direction
-                        <input type="number" step="0.01" name="winddirec" required value="{{ latest_inputs.winddirec if latest_inputs else '' }}">
-                    </label>
+    <div class="hero-panel">
+        <span class="panel-label">Best Active Model</span>
+        <strong>{{ model_name }}</strong>
+        <p>
+            The app trains multiple models, compares test RMSE, and selects the
+            lowest-error model as the default forecaster.
+        </p>
+    </div>
+</section>
 
-                    <label>
-                        Temperature
-                        <input type="number" step="0.01" name="temperature" required value="{{ latest_inputs.temperature if latest_inputs else '' }}">
-                    </label>
+<section class="insight-strip app-section" aria-label="WindCast highlights">
+    <div>
+        <span>Dataset</span>
+        <strong>43,800</strong>
+        <p>clean wind and power records</p>
+    </div>
+    <div>
+        <span>Inputs</span>
+        <strong>4</strong>
+        <p>windspeed, direction, temperature, humidity</p>
+    </div>
+    <div>
+        <span>Storage</span>
+        <strong>SQLite</strong>
+        <p>local prediction history</p>
+    </div>
+    <div>
+        <span>Default</span>
+        <strong>{{ model_name }}</strong>
+        <p>selected by lowest RMSE</p>
+    </div>
+</section>
 
-                    <label>
-                        Humidity
-                        <input type="number" step="0.01" name="humidity" required value="{{ latest_inputs.humidity if latest_inputs else '' }}">
-                    </label>
+<section class="app-section">
+    <div class="section-title">
+        <div>
+            <p class="eyebrow">Model Library</p>
+            <h2>All Forecasting Models</h2>
+        </div>
+        <span>{{ model_choices | length }} selectable models{% if not has_lstm %}; LSTM needs TensorFlow training{% endif %}</span>
+    </div>
 
-                    <button type="submit">Predict Power</button>
-                </form>
-            </div>
-
-            <div class="card result-card">
-                <h2>Prediction Result</h2>
-                <div id="result-output" class="{% if prediction is none %}is-hidden{% endif %}">
-                    <p class="result-number" id="prediction-value">{{ prediction }}</p>
-                    <p class="result-label">Predicted Power Output</p>
-                    <p class="model-note">Generated by <span id="prediction-model">{{ selected_model }}</span></p>
+    <div class="info-grid">
+        {% for card in model_cards %}
+            <article class="model-info-card">
+                <div class="model-card-top">
+                    <span class="model-icon">{{ card.name[:1] }}</span>
+                    {% if card.name == model_name %}
+                        <span class="best-badge">Best</span>
+                    {% elif not card.available %}
+                        <span class="setup-badge">Setup</span>
+                    {% endif %}
                 </div>
-                <p class="empty-state {% if prediction is not none %}is-hidden{% endif %}" id="result-empty">Submit the form to see the predicted power output.</p>
-            </div>
-        </section>
-
-        <section class="card graph-card">
-            <div class="section-title">
-                <h2>Advanced Live Graphs</h2>
-                <span>Latest 12 prediction analytics</span>
-            </div>
-
-            {% if dashboard.line_points %}
-                <div class="metric-strip">
-                    <div class="metric-box">
-                        <span>Latest</span>
-                        <strong>{{ dashboard.latest }}</strong>
+                <h3>{{ card.name }}</h3>
+                <p>{{ card.summary }}</p>
+                <span class="strength">{{ card.strength }}</span>
+                <span class="model-status">{{ card.status }}</span>
+                {% if card.metric %}
+                    <div class="stat-row">
+                        <span>MAE {{ card.metric.mae }}</span>
+                        <span>RMSE {{ card.metric.rmse }}</span>
+                        <span>R2 {{ card.metric.r2 }}</span>
                     </div>
-                    <div class="metric-box">
-                        <span>Average</span>
-                        <strong>{{ dashboard.average }}</strong>
-                    </div>
-                    <div class="metric-box">
-                        <span>Highest</span>
-                        <strong>{{ dashboard.highest }}</strong>
-                    </div>
-                    <div class="metric-box">
-                        <span>Lowest</span>
-                        <strong>{{ dashboard.lowest }}</strong>
-                    </div>
-                </div>
+                {% endif %}
+            </article>
+        {% endfor %}
+    </div>
+</section>
 
-                <div class="graph-wrap main-chart">
-                    <svg viewBox="0 0 720 260" role="img" aria-label="Prediction power trend graph">
-                        <line x1="34" y1="226" x2="686" y2="226" class="axis"></line>
-                        <line x1="34" y1="34" x2="34" y2="226" class="axis"></line>
-                        <line x1="34" y1="82" x2="686" y2="82" class="grid-line"></line>
-                        <line x1="34" y1="130" x2="686" y2="130" class="grid-line"></line>
-                        <line x1="34" y1="178" x2="686" y2="178" class="grid-line"></line>
-                        <polygon points="{{ dashboard.area_points }}" class="trend-area"></polygon>
-                        <polyline points="{{ dashboard.line_points }}" class="trend-line"></polyline>
-                        {% for point in dashboard.line_points.split() %}
-                            {% set xy = point.split(',') %}
-                            <circle cx="{{ xy[0] }}" cy="{{ xy[1] }}" r="5" class="trend-dot"></circle>
-                        {% endfor %}
-                    </svg>
-                    <p class="chart-caption">Power output trend across the newest 12 predictions.</p>
-                </div>
-
-                <div class="chart-grid">
-                    <div class="mini-chart">
-                        <h3>Prediction Bars</h3>
-                        <svg viewBox="0 0 720 260" role="img" aria-label="Prediction bar graph">
-                            <line x1="34" y1="226" x2="686" y2="226" class="axis"></line>
-                            {% for bar in dashboard.bars %}
-                                <rect x="{{ bar.x }}" y="{{ bar.y }}" width="{{ bar.width }}" height="{{ bar.height }}" class="bar"></rect>
-                                <text x="{{ bar.x + (bar.width / 2) }}" y="246" class="bar-label">{{ bar.label }}</text>
-                            {% endfor %}
-                        </svg>
-                        <p class="chart-caption">Each bar is one stored prediction, oldest to newest.</p>
-                    </div>
-
-                    <div class="mini-chart">
-                        <h3>Latest Weather Inputs</h3>
-                        <div class="gauge-list">
-                            {% for gauge in dashboard.gauges %}
-                                <div class="gauge-row">
-                                    <div class="gauge-top">
-                                        <span>{{ gauge.label }}</span>
-                                        <strong>{{ gauge.value }}</strong>
-                                    </div>
-                                    <div class="gauge-track">
-                                        <span style="width: {{ gauge.percent }}%"></span>
-                                    </div>
-                                </div>
-                            {% endfor %}
-                        </div>
-                        <p class="chart-caption">Input strength for the newest prediction record.</p>
-                    </div>
-                </div>
-            {% else %}
-                <p class="empty-state">No predictions yet. The graph appears after your first prediction.</p>
-            {% endif %}
-        </section>
-
-        <section class="card">
-            <div class="section-title">
-                <h2>Previous Prediction History</h2>
-                <span>Latest 12 records</span>
+<section class="app-section">
+    <div class="section-title">
+        <div>
+            <p class="eyebrow">Capabilities</p>
+            <h2>Advanced Features</h2>
+        </div>
+        <span>Comprehensive analytics suite</span>
+    </div>
+    
+    <div class="info-grid">
+        <article class="model-info-card">
+            <div class="model-card-top">
+                <span class="model-icon">📈</span>
             </div>
-
-            <div class="table-wrap">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Windspeed</th>
-                            <th>Temperature</th>
-                            <th>Predicted Power</th>
-                            <th>Time</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for row in history %}
-                            <tr>
-                                <td>{{ row.windspeed }}</td>
-                                <td>{{ row.temperature }}</td>
-                                <td>{{ row.predicted_power }}</td>
-                                <td>{{ row.created_at }}</td>
-                            </tr>
-                        {% else %}
-                            <tr>
-                                <td colspan="4" class="empty-row">No prediction history yet.</td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+            <h3>Multi-Model Evaluation</h3>
+            <p>Trains classic regressors, XGBoost, and neural networks, evaluating them on held-out test splits to identify the optimal forecasting pattern.</p>
+            <span class="strength">RMSE &amp; R2 metrics</span>
+        </article>
+        
+        <article class="model-info-card">
+            <div class="model-card-top">
+                <span class="model-icon">🌀</span>
             </div>
-        </section>
-
-        <section class="card">
-            <div class="section-title">
-                <h2>Model Comparison</h2>
-                <span>Best model: {{ model_name }}</span>
+            <h3>Polar Wind Rose</h3>
+            <p>Aggregates historical directions and computes trigonometric vectors to draw compass-rose wedges, analyzing wind frequency.</p>
+            <span class="strength">Compass sector graphs</span>
+        </article>
+        
+        <article class="model-info-card">
+            <div class="model-card-top">
+                <span class="model-icon">⚡</span>
             </div>
-
-            <div class="table-wrap">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Model</th>
-                            <th>MAE</th>
-                            <th>RMSE</th>
-                            <th>R2 Score</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for row in model_comparison %}
-                            <tr class="{% if row.name == selected_model %}selected-row{% endif %}" data-model-row="{{ row.name }}">
-                                <td>{{ row.name }}</td>
-                                <td>{{ row.mae }}</td>
-                                <td>{{ row.rmse }}</td>
-                                <td>{{ row.r2 }}</td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+            <h3>Turbine Power Curve</h3>
+            <p>Overlays mathematical physical power curve projections against predicted points to assess turbine performance efficiency.</p>
+            <span class="strength">Wind Speed vs Power curve</span>
+        </article>
+        
+        <article class="model-info-card">
+            <div class="model-card-top">
+                <span class="model-icon">📡</span>
             </div>
-        </section>
-    </main>
+            <h3>AJAX Integration</h3>
+            <p>Calculates power estimations dynamically using asynchronous API requests as you adjust features or model selections.</p>
+            <span class="strength">Real-time estimations</span>
+        </article>
+        
+        <article class="model-info-card">
+            <div class="model-card-top">
+                <span class="model-icon">🗄️</span>
+            </div>
+            <h3>Prediction History</h3>
+            <p>Logs all forecast evaluations to a local SQLite database, allowing grid operators to audit historical generation predictions.</p>
+            <span class="strength">Local audit log</span>
+        </article>
+    </div>
+</section>
 
-    <script>
-        const form = document.getElementById("prediction-form");
-        const modelChoices = document.querySelectorAll("input[name='model_choice']");
+<section class="about-section app-section">
+    <div class="card">
+        <p class="eyebrow">Operations</p>
+        <h2>Why Wind Forecasting Matters</h2>
+        <div class="steps">
+            <div>
+                <span>01</span>
+                <h3>Grid Load Balancing</h3>
+                <p>Grid operators must match supply and demand in real time. Accurate wind forecasts help prevent local power grid imbalances or sudden power drop-off shortages.</p>
+            </div>
+            <div>
+                <span>02</span>
+                <h3>Operational Blade Safety</h3>
+                <p>Establishes warning systems when wind speeds exceed safety ratings (18+ m/s cutout speed), preventing turbine generator overload or mechanical blade fatigue.</p>
+            </div>
+            <div>
+                <span>03</span>
+                <h3>Optimal Maintenance Scheduling</h3>
+                <p>Forecasts low-wind windows programmatically, allowing operators to plan turbine maintenance downtimes without incurring massive grid standby costs.</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card cta-card">
+        <p class="eyebrow">Get Started</p>
+        <h2>Ready to Evaluate Wind Turbine Power?</h2>
+        <p>Launch your manual forecast widget to select trained models, input ambient meteorological readings, and view advanced scatter plots and wind distribution charts.</p>
+        <a class="primary-link" href="{{ url_for('predict') }}">Launch Forecast Dashboard</a>
+    </div>
+</section>
 
-        const predictionValue = document.getElementById("prediction-value");
-        const predictionModel = document.getElementById("prediction-model");
-        const resultOutput = document.getElementById("result-output");
-        const resultEmpty = document.getElementById("result-empty");
-
-        modelChoices.forEach((modelChoice) => modelChoice.addEventListener("change", async () => {
-            const requiredInputs = form.querySelectorAll("input[required]");
-            const hasAllValues = Array.from(requiredInputs).every((input) => input.value);
-
-            if (hasAllValues) {
-                const response = await fetch("{{ url_for('api_predict') }}", {
-                    method: "POST",
-                    body: new FormData(form)
-                });
-                const data = await response.json();
-
-                predictionValue.textContent = data.prediction;
-                predictionModel.textContent = data.selected_model;
-                resultOutput.classList.remove("is-hidden");
-                resultEmpty.classList.add("is-hidden");
-
-                document.querySelectorAll("[data-model-row]").forEach((row) => {
-                    row.classList.toggle("selected-row", row.dataset.modelRow === data.selected_model);
-                });
-            }
-        }));
-    </script>
-</body>
-</html>
+<section class="card lstm-callout app-section">
+    <div>
+        <p class="eyebrow">LSTM Status</p>
+        <h2>Neural Time-Series Model</h2>
+        <p>
+            LSTM support is already coded in the training pipeline. On a TensorFlow-compatible
+            Python environment, it trains from rolling wind-data sequences, saves to
+            <strong>models/lstm.keras</strong>, and appears in the Prediction model picker.
+        </p>
+    </div>
+    <div class="status-grid">
+        <span>Current Python: <strong>{{ lstm_status.python_version }}</strong></span>
+        <span>Recommended: <strong>{{ lstm_status.recommended_python }}</strong></span>
+        <span>TensorFlow: <strong>{{ "Installed" if lstm_status.installed else "Not available here" }}</strong></span>
+        <span>LSTM trained: <strong>{{ "Yes" if lstm_status.trained else "No" }}</strong></span>
+    </div>
+</section>
+{% endblock %}

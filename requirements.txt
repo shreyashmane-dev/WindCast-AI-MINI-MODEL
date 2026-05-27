@@ -4,3 +4,4 @@ numpy
 scikit-learn
 xgboost
 joblib
+tensorflow; python_version < "3.13"

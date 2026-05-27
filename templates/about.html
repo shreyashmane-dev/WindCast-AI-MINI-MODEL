@@ -1,0 +1,134 @@
+{% extends "layout.html" %}
+
+{% block title %}About Us - WindCast AI{% endblock %}
+
+{% block content %}
+<section class="card app-section" style="background: linear-gradient(135deg, rgba(34, 211, 238, 0.12), transparent 45%), #1e293b; margin-bottom: 24px;">
+    <p class="eyebrow">Mission &amp; Purpose</p>
+    <h2>Optimizing Renewable Energy Integration</h2>
+    <p style="color: #cbd5e1; font-size: 16px; line-height: 1.6; max-width: 900px; margin-bottom: 0;">
+        Wind power is one of the cleanest sources of electrical energy, but it is highly intermittent and dependent on ambient atmospheric conditions. 
+        Sudden drops in windspeed can cause power grid shortages, while high winds require turbines to shut down to prevent mechanical failure. 
+        <strong>WindCast AI</strong> is designed to provide grid operators and wind farm technicians with short-term wind turbine power output forecasts. 
+        By utilizing machine learning models to map windspeed, wind direction, temperature, and humidity directly to turbine power output, we enable efficient grid load balancing, reduce dependency on fossil-fuel backup generators, and optimize maintenance schedules.
+    </p>
+</section>
+
+<section class="app-section">
+    <div class="section-title">
+        <div>
+            <p class="eyebrow">Technology Stack</p>
+            <h2>Under the Hood</h2>
+        </div>
+        <span>Modern web &amp; machine learning stack</span>
+    </div>
+    
+    <div class="info-grid tech-grid">
+        <div class="card tech-card">
+            <h3><span>💻</span> Frontend UI</h3>
+            <p>
+                Built using semantic **HTML5** and custom styled **Vanilla CSS3** to maximize responsiveness and rendering speed. 
+                Visual analytics (Power Curve scatters and polar Wind Roses) are drawn natively using **SVG vector mapping**. 
+                Dynamic prediction recalculations on model selection are performed asynchronously via the JavaScript **Fetch API (AJAX)**.
+            </p>
+        </div>
+        
+        <div class="card tech-card">
+            <h3><span>⚙️</span> Flask Backend</h3>
+            <p>
+                The server runs on **Flask** (Python 3.11), providing a lightweight routing mechanism to separate endpoints. 
+                Data persistence is managed locally with a lightweight **SQLite3** database which logs prediction parameters and results. 
+                Models are serialized using **Joblib** to load weights into memory instantly.
+            </p>
+        </div>
+        
+        <div class="card tech-card">
+            <h3><span>🧠</span> Machine Learning</h3>
+            <p>
+                Models are trained on a clean dataset of 43,800 records using **Scikit-Learn** (Linear Regression, Decision Tree, Random Forest Regressor), **XGBoost** for gradient-boosted trees, and **TensorFlow/Keras** to implement a sequential **Long Short-Term Memory (LSTM)** neural network for capturing temporal patterns.
+            </p>
+        </div>
+    </div>
+</section>
+
+<section class="app-section about-section">
+    <div class="card">
+        <p class="eyebrow">Workflow</p>
+        <h2>How WindCast AI Works</h2>
+        <div class="steps">
+            <div>
+                <span>01</span>
+                <h3>Load Dataset</h3>
+                <p>The app reads the local wind dataset, keeps the four weather features, removes empty rows, and uses measured power as the target value.</p>
+            </div>
+            <div>
+                <span>02</span>
+                <h3>Train Models</h3>
+                <p>Classic machine learning models learn from tabular readings. The LSTM path scales the data and builds short rolling sequences for neural time-series learning.</p>
+            </div>
+            <div>
+                <span>03</span>
+                <h3>Select Best</h3>
+                <p>Every trained model is tested on held-out data. MAE, RMSE, and R2 are calculated, and the lowest RMSE model becomes the default predictor.</p>
+            </div>
+            <div>
+                <span>04</span>
+                <h3>Track Results</h3>
+                <p>Each submitted forecast is saved in SQLite, shown in the History tab, and converted into trend, bar, and input-strength graphs in the Prediction tab.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <p class="eyebrow">Methodology</p>
+        <h2>Data Preprocessing &amp; Sequence Logic</h2>
+        <div class="detail-list">
+            <div>
+                <h3>MinMax Scaling</h3>
+                <p>Features are scaled between 0 and 1 using `MinMaxScaler` prior to neural network evaluation. This prevents features with larger numerical ranges (like wind direction) from dominating the learning process.</p>
+            </div>
+            <div>
+                <h3>LSTM Windowing</h3>
+                <p>To capture time dependencies, the dataset is windowed into rolling sequences of length = 6. This allows the LSTM network to analyze the last 30 minutes of weather trend transitions (assuming 5-minute sampling intervals) to forecast the next time step's power output.</p>
+            </div>
+            <div>
+                <h3>Dynamic Model Evaluation</h3>
+                <p>Scores make the app transparent: MAE shows average error, RMSE penalizes large errors, and R2 shows how well the model explains power variation.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="card about-wide">
+        <div class="section-title">
+            <div>
+                <p class="eyebrow">Comparison</p>
+                <h2>Model Scores</h2>
+            </div>
+            <span>Best model: {{ model_name }}</span>
+        </div>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Model</th>
+                        <th>MAE</th>
+                        <th>RMSE</th>
+                        <th>R2 Score</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in model_comparison %}
+                        <tr class="{% if row.name == selected_model %}selected-row{% endif %}" data-model-row="{{ row.name }}">
+                            <td>{{ row.name }}</td>
+                            <td>{{ row.mae }}</td>
+                            <td>{{ row.rmse }}</td>
+                            <td>{{ row.r2 }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+{% endblock %}

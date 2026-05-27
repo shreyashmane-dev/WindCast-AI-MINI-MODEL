@@ -1,0 +1,49 @@
+{% extends "layout.html" %}
+
+{% block title %}History - WindCast AI{% endblock %}
+
+{% block content %}
+<section class="card app-section">
+    <div class="section-title">
+        <div>
+            <p class="eyebrow">Records</p>
+            <h2>Prediction History</h2>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <a href="{{ url_for('download_report') }}" class="primary-link btn-small">Download CSV Report</a>
+            <span>Latest 12 records</span>
+        </div>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Windspeed</th>
+                    <th>Direction</th>
+                    <th>Temperature</th>
+                    <th>Humidity</th>
+                    <th>Predicted Power</th>
+                    <th>Time</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in history %}
+                    <tr>
+                        <td>{{ row.windspeed }}</td>
+                        <td>{{ row.winddirec }}</td>
+                        <td>{{ row.temperature }}</td>
+                        <td>{{ row.humidity }}</td>
+                        <td>{{ row.predicted_power }}</td>
+                        <td>{{ row.created_at }}</td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="6" class="empty-row">No prediction history yet.</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}
