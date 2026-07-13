@@ -1,1 +1,2 @@
 - Updated implementation notes. (2026-07-11 14:43:55.489058)
+- Minor documentation improvements. (2026-07-13 22:44:27.532579)
